@@ -1,0 +1,57 @@
+
+Youtube tables: (comments, videos)
+
+
+CREATE TABLE IF NOT EXISTS comments (
+    comment_id VARCHAR(255) PRIMARY KEY,
+target_video_id VARCHAR(255),
+    comment_text TEXT,
+value TEXT,
+    comment_created_datetime TIMESTAMP WITH TIME ZONE,
+    db_insert_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE IF NOT EXISTS videos (
+    id SERIAL PRIMARY KEY,  
+    videoId VARCHAR(255)
+);
+
+INSERT INTO videos (videoId) VALUES ('BC19kwABFwc');
+
+ =====================================================
+
+Reddit tables: ( reddit_comments, subreddits)
+
+CREATE TABLE IF NOT EXISTS reddit_comments (
+    comment_id VARCHAR(255) PRIMARY KEY,
+    comment_text TEXT,
+    subreddit VARCHAR(255),
+	submission_id VARCHAR(255),
+	value VARCHAR(255),
+    comment_created_time TIMESTAMP WITH TIME ZONE,
+    db_insertion_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE subreddits (
+    subreddit_id SERIAL PRIMARY KEY,
+    subreddit_name VARCHAR(255) NOT NULL
+);
+INSERT INTO subreddits (subreddit_name) VALUES ('frenchdipandwine');
+
+
+INSERT INTO subreddits (subreddit_name) VALUES
+    ('worldnews'),
+    ('news'),
+    ('conspiracy'),
+    ('TrueReddit'),
+    ('offbeat'),
+    ('soccer');
+
+INSERT INTO subreddits (subreddit_name) VALUES
+    ('science'),
+    ('movies'),
+    ('breakingbad'),
+    ('gameofthrones'),
+    ('gaming'),
+    ('announcements');

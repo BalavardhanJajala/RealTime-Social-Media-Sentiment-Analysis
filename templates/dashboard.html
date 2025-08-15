@@ -1,0 +1,777 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentiment Analysis of Youtube and Reddit</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script
+      src="https://kit.fontawesome.com/999a2ad408.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+      crossorigin="anonymous"
+    ></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
+    <div class="header">
+      <h1>SENTIMENT ANALYSIS OF REDDIT & YOUTUBE</h1>
+    </div>
+
+    <div class="container">
+      <div class="description">
+        <div id="basicData"></div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="dateSection">
+        <label for="startDate">Start Date:</label>
+        <input type="date" id="startDate" required />
+
+        <label for="endDate">End Date:</label>
+        <input type="date" id="endDate" required />
+
+        <button onclick="updateGraph()" class="update">Update</button>
+        <button onclick="resetGraph()" class="reset">Reset</button>
+      </div>
+    </div>
+    
+
+    <div class="container">
+      <div class="row">
+       
+        <div class="col">
+          <div class="commentAnalysis">
+            <h5 id="commentsHead"></h5>
+            <canvas id="commentsChart" width="500" height="300"></canvas>
+          </div>
+        </div>
+        <div class="col">
+          <div class="hateAnalysis">
+            <h5 id="hatefullHead"></h5>
+            <div class="optionsDiv">
+            <label for="hatefullSource">Select Source:</label>
+            <select id="hatefullSource">
+              <option value="youtube">YouTube</option>
+              <option value="reddit">Reddit</option>
+            </select>
+          </div>
+            <!-- <button onclick="updateSentimentGraph()">Update Sentiment Graph</button> -->
+            <div>
+              <canvas id="hateChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="sentimentAnalysis">
+            <h5 id="sentimentId"></h5>
+            <div class="optionsDiv">
+            <label for="sentimentSource">Select Source:</label>
+            <select id="sentimentSource">
+              <option value="youtube">YouTube</option>
+              <option value="reddit">Reddit</option>
+            </select>
+          </div>
+            <!-- <button onclick="updateSentimentGraph()">Update Sentiment Graph</button> -->
+            <div>
+              <canvas id="sentimentChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="hateAnalysis">
+            <h5 id="hateHead"></h5>
+            <div class="optionsDiv">
+            <label for="hatePercentageSource">Select Source:</label>
+            <select id="hatePercentageSource">
+              <option value="youtube">YouTube</option>
+              <option value="reddit">Reddit</option>
+            </select>
+          </div>
+            <!-- <button onclick="updateHatePercentageGraph()">Update Hate Percentage Graph</button> -->
+            <div>
+              <canvas id="hatePercentageChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="additionalOptions" style="display: none"></div>
+
+    <script>
+      let commentsChart;
+      let sentimentChart;
+      let hatePercentageChart;
+      let hateChart;
+      let source = "youtube";
+      const today = new Date();
+      const formattedDate = today.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+
+      let startDate = "2023-11-01";
+      let endDate = formattedDate;
+
+      const fetchData = async (url) => {
+        try {
+          const response = await fetch(url);
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          return null;
+        }
+      };
+      const loadGraph = async () => {
+        fetchDataAndUpdateLinePlot(startDate, endDate);
+        document.getElementById("additionalOptions").style.display = "block";
+        await fetchDataAndUpdateSentimentGraph(startDate, endDate, source);
+        await fetchDataAndUpdateHatePercentageGraph(startDate, endDate, source);
+        await fetchDataAndUpdateHatefullGraph(startDate,endDate,source);
+        fetchDataAndDisplayBasicData();
+      };
+
+      const updateGraph = () => {
+         startDate = document.getElementById("startDate").value;
+         endDate = document.getElementById("endDate").value;
+
+        // Fetch data for line plot
+        fetchDataAndUpdateLinePlot(startDate, endDate);
+
+        // Show additional options
+        document.getElementById("additionalOptions").style.display = "block";
+        updateSentimentGraph();
+        updateHatePercentageGraph();
+        updateHateFullGraph();
+      };
+
+      const resetGraph = () => {
+        location.reload();
+      };
+
+      const updateSentimentGraph = async () => {
+      if(startDate ==""){
+        startDate = document.getElementById("startDate").value;
+      }
+      if(endDate ==""){
+        endDate = document.getElementById("endDate").value;
+      }
+     
+        source = document.getElementById("sentimentSource").value;
+  
+        // Fetch and display sentiment graph
+        await fetchDataAndUpdateSentimentGraph(startDate, endDate, source);
+
+      };
+
+      const updateHatePercentageGraph = async () => {
+        if(startDate ==""){
+        startDate = document.getElementById("startDate").value;
+      }
+      if(endDate ==""){
+        endDate = document.getElementById("endDate").value;
+      }
+        source = document.getElementById("hatePercentageSource").value;
+        // Fetch and display hate percentage graph
+        await fetchDataAndUpdateHatePercentageGraph(startDate, endDate, source);
+      };
+
+
+      const updateHateFullGraph = async () => {
+      if(startDate ==""){
+        startDate = document.getElementById("startDate").value;
+      }
+      if(endDate ==""){
+        endDate = document.getElementById("endDate").value;
+      }
+     
+        source = document.getElementById("hatefullSource").value;
+  
+        // Fetch and display sentiment graph
+        await fetchDataAndUpdateHatefullGraph(startDate,endDate,source);
+        
+      };
+
+      const fetchDataAndUpdateLinePlot = async (startDate, endDate) => {
+        const data = await fetchData(
+          `http://128.226.29.123/data/?start_date=${startDate}&end_date=${endDate}`
+        );
+
+        if (data) {
+          
+          const combinedData = {
+            labels: data.youtube.map(([date]) => new Date(date)),
+            datasets: [
+              {
+                label: "YouTube Comments",
+                data: parseData(data.youtube),
+                borderColor: "rgb(255, 99, 132)",
+                fill: false,
+              },
+              {
+                label: "Reddit Comments",
+                data: parseData(data.reddit),
+                borderColor: "rgb(75, 192, 192)",
+                fill: false,
+              },
+            ],
+          };
+
+          // Remove the existing chart if it exists
+          if (commentsChart) {
+            commentsChart.destroy();
+          }
+
+          // Update the chart
+          const ctx = document.getElementById("commentsChart").getContext("2d");
+          commentsChart = new Chart(ctx, {
+            type: "line",
+            data: combinedData,
+            options: {
+              scales: {
+                x: {
+                  type: "time",
+                  title:{
+                    text:'Date Range',
+                    display:true,
+                    color: '#ff4069',
+                    font: {
+                      size: 20,
+                      weight:' Bold'
+                    },
+                    padding: {top: 20, left: 0, right: 0, bottom: 0}
+
+                  },
+                  time: {
+                    unit: "day",
+                  },
+                 
+                },
+                y: {
+                  beginAtZero: true,
+                  title:{
+                    text:'Comments Count',
+                    display:true,
+                    color: '#4cc0c0',
+                    font: {
+                      size: 20,
+                      weight:' Bold'
+                    },
+                    padding: {top: 20, left: 0, right: 0, bottom: 0}
+
+                  },
+                  
+                },
+              },
+            },
+          });
+          const commentsHead = document.getElementById("commentsHead");
+    const formattedStartDate = new Date(startDate).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    const formattedEndDate = new Date(endDate).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    commentsHead.textContent = `Comments per day from ${startDate} to ${endDate}`;
+        }
+      };
+
+      const fetchDataAndUpdateSentimentGraph = async (
+        startDate,
+        endDate,
+        source
+      ) => {
+        const data = await fetchData(
+          `http://128.226.29.123/sentiment/?start_date=${startDate}&end_date=${endDate}&source=${source}`
+        );
+
+        if (data) {
+          let chartData;
+
+          if (source === "youtube") {
+
+            chartData = {
+              labels: data.youtube.map(([id]) => id),
+              datasets: [
+                {
+                  label: "Positive Percentage",
+                  data: parseSentimentData(data.youtube, "positive"),
+                  backgroundColor: "rgb(75, 192, 192)",
+                },
+                {
+                  label: "Neutral Percentage",
+                  data: parseSentimentData(data.youtube, "neutral"),
+                  backgroundColor: "rgb(255, 99, 132)",
+                },
+                {
+                  label: "Negative Percentage",
+                  data: parseSentimentData(data.youtube, "negative"),
+                  backgroundColor: "rgb(255, 205, 86)",
+                },
+              ],
+            };
+          } else if (source === "reddit") {
+            chartData = {
+              labels: data.reddit.map(([id]) => id),
+              datasets: [
+                {
+                  label: "Positive Percentage",
+                  data: parseSentimentData(data.reddit, "positive"),
+                  backgroundColor: "rgb(75, 192, 192)",
+                },
+                {
+                  label: "Neutral Percentage",
+                  data: parseSentimentData(data.reddit, "neutral"),
+                  backgroundColor: "rgb(255, 99, 132)",
+                },
+                {
+                  label: "Negative Percentage",
+                  data: parseSentimentData(data.reddit, "negative"),
+                  backgroundColor: "rgb(255, 205, 86)",
+                },
+              ],
+            };
+          }
+          if (sentimentChart) {
+            sentimentChart.destroy();
+          }
+          const chartTitle = source === "youtube" ? "Song Names" : "Sub-Reddits";
+          const ctx = document
+            .getElementById("sentimentChart")
+            .getContext("2d");
+          sentimentChart = new Chart(ctx, {
+            type: "bar",
+            data: chartData,
+            options: {
+              scales: {
+                x: {
+                  stacked: true,
+                  title:{
+                    text:`${chartTitle}`,
+                    display:true,
+                    color: '#ff4069',
+                    font: {
+                      size: 20,
+                      weight:' Bold'
+                    },
+                    padding: {top: 20, left: 0, right: 0, bottom: 0}
+
+                  },
+                },
+                y: {
+                  stacked: true,
+                  beginAtZero: true,
+                  max: 100,
+                  title:{
+                    text:'Percentage',
+                    display:true,
+                    color: '#4cc0c0',
+                    font: {
+                      size: 20,
+                      weight:' Bold'
+                    },
+                    padding: {top: 20, left: 0, right: 0, bottom: 0}
+
+                  },
+                },
+              },
+            },
+          });
+          const commentsHead = document.getElementById("sentimentId");
+    commentsHead.textContent = `Sentiment in comments from ${startDate} to ${endDate}`;
+        }
+        
+      };
+
+
+      const fetchDataAndUpdateHatefullGraph = async (
+        startDate,
+        endDate,
+        source
+      ) => {
+        const data = await fetchData(
+          `http://128.226.29.123/hatespeech/?start_date=${startDate}&end_date=${endDate}&source=${source}`
+        );
+
+        if (data) {
+          let chartData;
+
+          if (source === "youtube") {
+            chartData = {
+              labels: data.youtube.map(([id]) => id),
+              datasets: [
+                {
+                  label: "Hateful Percentage",
+                  data: parseHateData(data.youtube, "hatefull"),
+                  backgroundColor: "rgb(75, 192, 192)",
+                },
+                {
+                  label: "Not Hateful Percentage",
+                  data: parseHateData(data.youtube, "nothatefull"),
+                  backgroundColor: "rgb(255, 99, 132)",
+                }
+              ],
+            };
+          } else if (source === "reddit") {
+            chartData = {
+              labels: data.reddit.map(([id]) => id),
+              datasets: [
+                {
+                  label: "Hate Percentage",
+                  data: parseHateData(data.reddit, "hatefull"),
+                  backgroundColor: "rgb(75, 192, 192)",
+                },
+                {
+                  label: "Not Hate Percentage",
+                  data: parseHateData(data.reddit, "nothatefull"),
+                  backgroundColor: "rgb(255, 99, 132)",
+                }
+              ],
+            };
+          }
+          if (hateChart) {
+            hateChart.destroy();
+          }
+          const chartTitle = source === "youtube" ? "Song Names" : "Sub-Reddits";
+          const ctx = document
+            .getElementById("hateChart")
+            .getContext("2d");
+            hateChart = new Chart(ctx, {
+  type: "bar",
+  data: chartData,
+  options: {
+    scales: {
+      x: {
+        stacked: false,
+        title:{
+                    text:`${chartTitle} `,
+                    display:true,
+                    color: '#ff4069',
+                    font: {
+                      size: 20,
+                      weight:' Bold'
+                    },
+                    padding: {top: 20, left: 0, right: 0, bottom: 0}
+
+                  },
+      },
+      y: {
+        stacked: false,
+        beginAtZero: true,
+        max: 100,
+        title:{
+                    text:'Percentage',
+                    display:true,
+                    color: '#4cc0c0',
+                    font: {
+                      size: 20,
+                      weight:' Bold'
+                    },
+                    padding: {top: 20, left: 0, right: 0, bottom: 0}
+
+                  },
+      },
+    },
+  },
+});
+
+const commentsHead = document.getElementById("hatefullHead");
+    commentsHead.textContent = `Hate speech presence in comments from ${startDate} to ${endDate}`;
+
+        }
+      };
+
+      const fetchDataAndUpdateHatePercentageGraph = async (
+        startDate,
+        endDate,
+        source
+      ) => {
+        const data = await fetchData(
+          `http://128.226.29.123/hatepercentage/?start_date=${startDate}&end_date=${endDate}&source=${source}`
+        );
+
+        if (data) {
+          let hatePercentageData;
+
+          if (source === "youtube") {
+            const [matchedPercentage] = data.youtube[0];
+            hatePercentageData = {
+              labels: ["Negative & Not Hateful", "Negative & Hateful"],
+              datasets: [
+                {
+                  label: "Not Matched",
+                  data: [100 - matchedPercentage,matchedPercentage ],
+                  backgroundColor: ["rgb(75, 192, 192)", "rgb(255, 99, 132)"],
+                },
+              ],
+            };
+          } else if (source === "reddit") {
+            const [matchedPercentage] = data.reddit[0];
+            hatePercentageData = {
+              labels: ["Negative & Not Hateful", "Negative & Hateful"],
+              datasets: [
+                {
+                  label: "Not Matched",
+                  data: [100 - matchedPercentage,matchedPercentage],
+                  backgroundColor: ["rgb(75, 192, 192)", "rgb(255, 99, 132)"],
+                },
+              ],
+            };
+          }
+
+          // Remove the existing chart if it exists
+          if (hatePercentageChart) {
+            hatePercentageChart.destroy();
+          }
+
+          // Update the chart
+          const ctx = document
+            .getElementById("hatePercentageChart")
+            .getContext("2d");
+          hatePercentageChart = new Chart(ctx, {
+            type: "bar",
+            data: hatePercentageData,
+            options: {
+              scales: {
+                x: {
+                  stacked: false,
+                  title:{
+                   text:'Sentiment-HateSpeech', 
+                    display:true,
+                    color: '#ff4069',
+                    font: {
+                      size: 20,
+                      weight:' Bold'
+                    },
+                    padding: {top: 20, left: 0, right: 0, bottom: 0}
+
+                  },
+                },
+                y: {
+                  stacked: false,
+                  beginAtZero: true,
+                  max: 100,
+                  title:{
+                    text:'Percentage',
+                    display:true,
+                    color: '#4cc0c0',
+                    font: {
+                      size: 20,
+                      weight:' Bold'
+                    },
+                    padding: {top: 20, left: 0, right: 0, bottom: 0}
+
+                  },
+                },
+              },
+            },
+          });
+          const commentsHead = document.getElementById("hateHead");
+    commentsHead.textContent = `Understanding Negative Sentiment: Matched vs. Non-matched Hate Speech from ${startDate} to ${endDate}`;
+        }
+      };
+      const fetchDataAndDisplayBasicData = async () => {
+        const basicData = await fetchData("http://128.226.29.123/basic/");
+        if (basicData) {
+          const basicDataContent = `
+                   
+
+                <div class="dataProcessed">
+                        <div class="container">
+                            <div class = "row">
+                                
+                                <div class="col-md-3 col-sm-6 col-12">
+                                    <div class="redditTotal">
+                                    <p><i class="fa-brands fa-reddit-alien"></i>Total</p>
+                                    <p class="countData"> ${basicData.reddit_total}</p>
+                                    <p>Comments</p>
+                                    </div>
+                                
+                                </div>
+                                <div class="col-md-3 col-sm-6 col-12">
+                                    <div class="redditCnt">
+                                    <p><i class="fa-brands fa-reddit-alien"></i>Processed</p>
+                                    <p class="countData"> ${basicData.reddit_processed}</p>
+                                    <p>Comments</p>
+                                    </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 col-12">
+                                    <div class="ytubeTotal">
+                                    <p><i class="fa-brands fa-youtube"></i>Total</p>
+                                    <p class="countData"> ${basicData.youtube_total}</p>
+                                    <p>Comments</p>
+                                    </div>
+                                    </div>
+                                <div class="col-md-3 col-sm-6 col-12">
+                                    <div class="ytubeCnt">
+                                    <p><i class="fa-brands fa-youtube"></i>Processed</p>
+                                    <p class="countData"> ${basicData.youtube_processed}</p>
+                                    <p>Comments</p>
+                                   </div>
+                                </div>
+                                
+                                </div>
+                            </div>
+                        </div>
+                `;
+          document.getElementById("basicData").innerHTML = basicDataContent;
+        }
+      };
+
+      const parseData = (data) => {
+        return data ? data.map(([date, count]) => [new Date(date), count]) : [];
+      };
+
+      const parseSentimentData = (data, sentiment) => {
+        return data
+          ? data.map(([_, positive, neutral, negative]) => {
+              switch (sentiment) {
+                case "positive":
+                  return positive;
+                case "neutral":
+                  return neutral;
+                case "negative":
+                  return negative;
+                default:
+                  return 0;
+              }
+            })
+          : [];
+      };
+      const parseHateData = (data, hateData) => {
+  return data
+    ? data.map(([_, value]) => {
+        switch (hateData) {
+          case "hatefull":
+            return value;
+          case "nothatefull":
+            return 100 - value; // Calculate the "Not Hatefull Percentage"
+          default:
+            return 0;
+        }
+      })
+    : [];
+};
+
+      document
+        .getElementById("sentimentSource")
+        .addEventListener("change", updateSentimentGraph);
+      document
+        .getElementById("hatePercentageSource")
+        .addEventListener("change", updateHatePercentageGraph);
+        document
+        .getElementById("hatefullSource")
+        .addEventListener("change", updateHateFullGraph);
+      loadGraph();
+    </script>
+    <style>
+      body {
+        font-family: "Poppins", sans-serif !important;
+        background-color: #d9edfc;
+      }
+      .commentAnalysis,
+      .hateAnalysis,
+      .sentimentAnalysis,
+      .description,
+      .dateSection {
+        padding: 20px;
+        margin: 20px;
+        box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
+        border-radius: 5px;
+        background-color: #fff;
+      }
+      .commentAnalysis,
+      .hateAnalysis,
+      .sentimentAnalysis{
+        height: 400px;
+      }
+      .dateSection button {
+        border-radius: 8px;
+        box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
+        padding: 5px;
+        border: none;
+      }
+      .dateSection .update {
+        background: #4cc0c0;
+        color: #fff;
+      }
+      .dateSection .reset {
+        background: #ff4069;
+        color: #fff;
+        float: right;
+      }
+      .header {
+        text-align: center;
+        padding: 20px;
+      }
+      .row {
+        display: flex;
+      }
+
+      .redditCnt,
+      .redditTotal,
+      .ytubeCnt,
+      .ytubeTotal {
+        text-align: center;
+        padding: 15px;
+        box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
+        border-radius: 5px;
+        margin: 10px;
+        transition: transform .3s;
+        color: #fff;
+      }
+      .dataProcessed .redditCnt {
+        background-color: #ff4069;
+      }
+      .dataProcessed .redditTotal {
+        background-color: #4cc0c0;
+      }
+      .dataProcessed .ytubeCnt {
+        background-color: #ffcd56;
+      }
+      .dataProcessed .ytubeTotal {
+        background-color: #35a1eb;
+      }
+
+      .countData {
+        font-size: 40px;
+        font-weight: bold;
+      }
+      .redditCnt:hover,
+      .redditTotal:hover,
+      .ytubeCnt:hover,
+      .ytubeTotal:hover {
+        transform: scale(1.2);
+      }
+      .optionsDiv{
+        margin: 8px 0px;
+      }
+
+      /* Optional: Add styles for icons if needed */
+      .fa-brands,
+      .fa-reddit-alien,
+      .fa-youtube {
+        /* Add your icon styles here */
+        margin: 0px 5px;
+        font-size: 18px;
+      }
+    </style>
+  </body>
+</html>
